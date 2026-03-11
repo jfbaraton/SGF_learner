@@ -27,7 +27,7 @@
           <span class="control-separator"></span>
           <button id="btn-pass" title="Select pass variation (P)">Pass</button>
         </div>
-        <div id="controls">
+        <div id="controls-secondary">
           <button id="btn-save-start" title="Remember current position as the starting point">📌 Save Start</button>
           <button id="btn-saved-start" title="Back to starting point">🏁 Start</button>
           <span class="control-separator"></span>
@@ -73,6 +73,15 @@
               <label>Discovered leaves</label>
               <button id="btn-reset-leaves" class="setting-btn-danger">Reset</button>
             </div>
+            <div class="setting-row">
+              <label id="sgf-file-label">SGF file: <em>default</em></label>
+              <span class="setting-btn-group">
+                <button id="btn-upload-sgf" class="setting-btn">Upload</button>
+                <button id="btn-download-sgf" class="setting-btn">Download</button>
+                <button id="btn-reset-sgf" class="setting-btn-danger">Default</button>
+              </span>
+            </div>
+            <input type="file" id="sgf-file-input" accept=".sgf" style="display:none" />
           </div>
         </details>
 

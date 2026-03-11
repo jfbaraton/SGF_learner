@@ -3,7 +3,8 @@ import SGFTreeNavigator from './sgf-tree-navigator';
 import GobanRenderer from './goban-renderer';
 import { parseVertex } from '@sabaki/sgf';
 // import sgfContent from '../eidogo_joseki.sgf';
-import sgfContent from '../handmade_mustknow.sgf';
+// import sgfContent from '../handmade_mustknow.sgf';
+import sgfContent from '../handmade_mustknow_bookmarked.sgf';
 
 // --- Loading overlay ---
 function showLoading() {
@@ -22,18 +23,32 @@ function hideLoading() {
 }
 
 // --- Main Application ---
+const SGF_CUSTOM_KEY = 'sgf-explorer-custom-sgf';
+const SGF_FILENAME_KEY = 'sgf-explorer-custom-filename';
+
 function init() {
   showLoading();
 
   // Use setTimeout to allow the loading overlay to render first
   setTimeout(() => {
     try {
-      const navigator = new SGFTreeNavigator(sgfContent);
+      // Check localStorage for a custom SGF file
+      const customSgf = localStorage.getItem(SGF_CUSTOM_KEY);
+      const activeSgf = customSgf || sgfContent;
+
+      const navigator = new SGFTreeNavigator(activeSgf);
       const canvas = document.getElementById('goban');
       const renderer = new GobanRenderer(canvas, navigator.boardSize);
 
       const app = new App(navigator, renderer);
       app.start();
+
+      // Update the SGF file label
+      const filename = localStorage.getItem(SGF_FILENAME_KEY);
+      const label = document.getElementById('sgf-file-label');
+      if (label) {
+        label.innerHTML = `SGF file: <em>${filename || 'default'}</em>`;
+      }
 
       hideLoading();
     } catch (err) {
@@ -87,6 +102,10 @@ class App {
     this.settingBoardSize = document.getElementById('setting-boardsize');
     this.settingVaryOrientation = document.getElementById('setting-vary-orientation');
     this.btnResetLeaves = document.getElementById('btn-reset-leaves');
+    this.btnUploadSgf = document.getElementById('btn-upload-sgf');
+    this.btnDownloadSgf = document.getElementById('btn-download-sgf');
+    this.btnResetSgf = document.getElementById('btn-reset-sgf');
+    this.sgfFileInput = document.getElementById('sgf-file-input');
 
     // Restore persisted settings
     this._loadSettings();
@@ -224,6 +243,30 @@ class App {
       localStorage.setItem(MISTAKES_KEY, JSON.stringify(this.mistakes));
     } catch (e) {
       // localStorage may be unavailable
+    }
+  }
+
+  /**
+   * Persist the current in-memory SGF tree to localStorage.
+   * Called after any mutation to the SGF (e.g. bookmark creation).
+   */
+  _persistSGF() {
+    try {
+      const sgfText = this.nav.toSGF();
+      localStorage.setItem(SGF_CUSTOM_KEY, sgfText);
+      // If there wasn't a custom filename yet, set one
+      if (!localStorage.getItem(SGF_FILENAME_KEY)) {
+        localStorage.setItem(SGF_FILENAME_KEY, 'modified.sgf');
+      }
+      // Update the file label
+      const label = document.getElementById('sgf-file-label');
+      if (label) {
+        const filename = localStorage.getItem(SGF_FILENAME_KEY);
+        label.innerHTML = `SGF file: <em>${filename}</em>`;
+      }
+    } catch (e) {
+      // localStorage may be unavailable or full
+      console.warn('Failed to persist SGF:', e);
     }
   }
 
@@ -389,6 +432,58 @@ class App {
         this._updateLearnStats();
       }
     });
+
+    // SGF file upload
+    this.btnUploadSgf.addEventListener('click', () => {
+      this.sgfFileInput.click();
+    });
+    this.sgfFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const text = ev.target.result;
+        try {
+          // Validate that it parses before storing
+          new SGFTreeNavigator(text);
+          localStorage.setItem(SGF_CUSTOM_KEY, text);
+          localStorage.setItem(SGF_FILENAME_KEY, file.name);
+          // Clear stale progress from old SGF
+          localStorage.removeItem('sgf-explorer-found-leaves');
+          localStorage.removeItem('sgf-explorer-mistakes');
+          localStorage.removeItem('sgf-explorer-saved-start');
+          location.reload();
+        } catch (err) {
+          alert(`Invalid SGF file: ${err.message}`);
+        }
+      };
+      reader.readAsText(file);
+      // Reset input so the same file can be re-selected
+      this.sgfFileInput.value = '';
+    });
+    this.btnDownloadSgf.addEventListener('click', () => {
+      const customSgf = localStorage.getItem(SGF_CUSTOM_KEY);
+      const content = customSgf || sgfContent;
+      const filename = localStorage.getItem(SGF_FILENAME_KEY) || 'export.sgf';
+      const blob = new Blob([content], { type: 'application/x-go-sgf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    this.btnResetSgf.addEventListener('click', () => {
+      if (!localStorage.getItem(SGF_CUSTOM_KEY)) return;
+      if (confirm('Reset to default SGF file? Progress will be cleared.')) {
+        localStorage.removeItem(SGF_CUSTOM_KEY);
+        localStorage.removeItem(SGF_FILENAME_KEY);
+        localStorage.removeItem('sgf-explorer-found-leaves');
+        localStorage.removeItem('sgf-explorer-mistakes');
+        localStorage.removeItem('sgf-explorer-saved-start');
+        location.reload();
+      }
+    });
   }
 
   _next() {
@@ -482,6 +577,7 @@ class App {
     if (name.trim() === '') return; // empty
 
     this.nav.setBookmark(name.trim());
+    this._persistSGF();
     this._updateDisplay();
   }
 

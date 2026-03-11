@@ -1,4 +1,4 @@
-import { parse, parseVertex } from '@sabaki/sgf';
+import { parse, parseVertex, stringify } from '@sabaki/sgf';
 
 /**
  * SGF Tree Navigator - traverses a parsed SGF game tree
@@ -594,6 +594,14 @@ export default class SGFTreeNavigator {
       }
     }
     return { found, total };
+  }
+
+  /**
+   * Serialize the entire SGF tree back to a string.
+   * @returns {string}
+   */
+  toSGF() {
+    return stringify(this.root);
   }
 }
 

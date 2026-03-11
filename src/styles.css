@@ -84,14 +84,20 @@ header h1 {
   cursor: pointer;
 }
 
-#controls {
+#controls,
+#controls-secondary {
   display: flex;
   justify-content: center;
   gap: 8px;
   margin-top: 16px;
 }
 
-#controls button {
+#controls-secondary {
+  margin-top: 8px;
+}
+
+#controls button,
+#controls-secondary button {
   background: #16213e;
   color: #e0e0e0;
   border: 1px solid #0f3460;
@@ -103,28 +109,33 @@ header h1 {
   user-select: none;
 }
 
-#controls button:hover {
+#controls button:hover,
+#controls-secondary button:hover {
   background: #0f3460;
   border-color: #e0c080;
 }
 
-#controls button:active {
+#controls button:active,
+#controls-secondary button:active {
   background: #e94560;
   transform: scale(0.95);
 }
 
-#controls button:disabled {
+#controls button:disabled,
+#controls-secondary button:disabled {
   opacity: 0.35;
   cursor: not-allowed;
   transform: none;
 }
 
-#controls button:disabled:hover {
+#controls button:disabled:hover,
+#controls-secondary button:disabled:hover {
   background: #16213e;
   border-color: #0f3460;
 }
 
-#controls .control-separator {
+#controls .control-separator,
+#controls-secondary .control-separator {
   width: 1px;
   background: #0f3460;
   align-self: stretch;
@@ -496,6 +507,37 @@ header h1 {
 .setting-btn-danger:hover {
   background: #8b2020;
   color: #fff;
+}
+
+.setting-btn {
+  background: #0f3460;
+  color: #e0e0e0;
+  border: 1px solid #1a4080;
+  border-radius: 4px;
+  padding: 4px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.setting-btn:hover {
+  background: #1a4080;
+  border-color: #e0c080;
+}
+
+.setting-btn-group {
+  display: flex;
+  gap: 6px;
+}
+
+#sgf-file-label {
+  font-size: 0.85rem;
+  color: #c0c0d0;
+}
+
+#sgf-file-label em {
+  color: #e0c080;
+  font-style: normal;
 }
 
 #comment-text {
