@@ -82,7 +82,32 @@ class App {
 
   start() {
     this._bindEvents();
+    this._restoreSavedStart();
     this._updateDisplay();
+  }
+
+  /**
+   * On initial load, navigate to the saved starting point if one exists
+   * and is still valid in the current SGF tree.
+   */
+  _restoreSavedStart() {
+    const SAVED_START_KEY = 'sgf-explorer-saved-start';
+    let path;
+    try {
+      path = JSON.parse(localStorage.getItem(SAVED_START_KEY));
+    } catch (e) {
+      return;
+    }
+    if (!Array.isArray(path) || path.length === 0) return;
+
+    if (!this.nav.goToPath(path)) {
+      // Path is no longer valid in the SGF — clear it
+      try {
+        localStorage.removeItem(SAVED_START_KEY);
+      } catch (e) {
+        // ignore
+      }
+    }
   }
 
   _loadSettings() {

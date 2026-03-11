@@ -260,12 +260,14 @@ export default class SGFTreeNavigator {
    * Navigate to a position described by an array of branch indices.
    * Resets to root first, then replays each step.
    * @param {number[]} path
+   * @returns {boolean} true if the entire path was valid and traversed
    */
   goToPath(path) {
     this.goToStart();
     for (const branchIndex of path) {
-      if (!this.next(branchIndex)) break;
+      if (!this.next(branchIndex)) return false;
     }
+    return true;
   }
 
   /**
