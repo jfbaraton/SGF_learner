@@ -7,6 +7,17 @@ import { parseVertex } from '@sabaki/sgf';
 import sgfContent from '../handmade_mustknow_bookmarked.sgf';
 
 // --- Loading overlay ---
+
+/**
+ * Truncate path display to 2 first + 4 last moves with ellipsis.
+ */
+function truncatePath(parts) {
+  if (parts.length <= 6) return parts.join(' → ');
+  const first = parts.slice(0, 2);
+  const last = parts.slice(-4);
+  return `${first.join(' → ')} … ${last.join(' → ')}`;
+}
+
 function showLoading() {
   const overlay = document.createElement('div');
   overlay.id = 'loading-overlay';
@@ -632,6 +643,11 @@ class App {
         this.nav.goToPath(bm.path);
         this.selectedBranch = 0;
         this.extraMarks = [];
+        // Set this bookmark as the start point
+        try {
+          localStorage.setItem('sgf-explorer-saved-start', JSON.stringify(bm.path));
+        } catch (e) { /* ignore */ }
+        this.btnSavedStart.disabled = false;
         this._updateDisplay();
       });
 
@@ -656,9 +672,7 @@ class App {
         parts.push(`W${this.nav.coordToString(x, y)}`);
       }
     }
-    return parts.length > 3
-      ? `${parts.slice(0, 2).join('→')}…→${parts[parts.length - 1]}`
-      : parts.join(' → ') || 'Root';
+    return truncatePath(parts) || 'Root';
   }
 
   _prevBranch() {
@@ -744,7 +758,12 @@ class App {
     this.moveCounter.textContent = `Move ${info.depth}`;
 
     // Update path
-    this.pathDisplay.textContent = this.nav.getPathString() || 'Start position';
+    const pathStr = this.nav.getPathString() || 'Start position';
+    const numNext = info.numChildren;
+    const nextInfo = numNext > 0
+      ? `\n${numNext} possibilit${numNext === 1 ? 'y' : 'ies'} for next move`
+      : '\nEnd of line';
+    this.pathDisplay.textContent = pathStr + nextInfo;
 
     // Update branch selector
     this._updateBranchSelect();
@@ -907,7 +926,7 @@ class App {
         parts.push(`W${this.nav.coordToString(x, y)}`);
       }
     }
-    return parts.join(' → ') || 'Root';
+    return truncatePath(parts) || 'Root';
   }
 
   /**

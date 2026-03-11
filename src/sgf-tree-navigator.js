@@ -1,6 +1,16 @@
 import { parse, parseVertex, stringify } from '@sabaki/sgf';
 
 /**
+ * Truncate path display to 2 first + 4 last moves with ellipsis.
+ */
+function _truncatePath(parts) {
+  if (parts.length <= 6) return parts.join(' → ');
+  const first = parts.slice(0, 2);
+  const last = parts.slice(-4);
+  return `${first.join(' → ')} … ${last.join(' → ')}`;
+}
+
+/**
  * SGF Tree Navigator - traverses a parsed SGF game tree
  * Each node has: { id, data, parentId, children }
  * data keys: B, W (moves), C (comments), LB (labels), AB/AW (setup stones), etc.
@@ -489,7 +499,7 @@ export default class SGFTreeNavigator {
       const prefix = currentMove.color === 'black' ? 'B' : 'W';
       parts.push(currentMove.pass ? `${prefix} Pass` : `${prefix}${this._coordToString(currentMove.x, currentMove.y)}`);
     }
-    return parts.join(' → ');
+    return _truncatePath(parts);
   }
 
   /**
