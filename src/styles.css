@@ -64,6 +64,21 @@ header h1 {
   }
 }
 
+#board-container.flash-red {
+  animation: redFlash 0.6s ease-out;
+}
+
+@keyframes redFlash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(233, 69, 96, 0.8), 0 8px 32px rgba(0, 0, 0, 0.4);
+    background: #e06070;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(233, 69, 96, 0), 0 8px 32px rgba(0, 0, 0, 0.4);
+    background: #dcb35c;
+  }
+}
+
 #goban {
   display: block;
   cursor: pointer;
@@ -217,6 +232,75 @@ header h1 {
   color: #d0d0d0;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.85rem;
+}
+
+.learn-stat-value.has-mistakes {
+  color: #e09090;
+}
+
+/* Mistakes list (foldable) */
+#mistakes-box {
+  margin-top: 12px;
+}
+
+#mistakes-box summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  font-size: 0.8rem;
+  color: #e09090;
+}
+
+#mistakes-box summary::-webkit-details-marker {
+  display: none;
+}
+
+#mistakes-box summary::after {
+  content: ' ▸';
+  font-size: 0.7rem;
+}
+
+#mistakes-box[open] summary::after {
+  content: ' ▾';
+}
+
+.mistakes-list {
+  margin-top: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mistake-item {
+  font-size: 0.75rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #c0a0a0;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s;
+  word-break: break-all;
+}
+
+.mistake-item:hover {
+  background: #2a1a2e;
+  color: #e0c0c0;
+}
+
+.mistakes-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.mistakes-list::-webkit-scrollbar-track {
+  background: #0f3460;
+  border-radius: 3px;
+}
+
+.mistakes-list::-webkit-scrollbar-thumb {
+  background: #e09090;
+  border-radius: 3px;
 }
 
 /* Settings section */

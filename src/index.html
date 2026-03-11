@@ -70,6 +70,10 @@
               <label>Discovered leaves</label>
               <button id="btn-reset-leaves" class="setting-btn-danger">Reset</button>
             </div>
+            <div class="setting-row">
+              <label>Mistakes</label>
+              <button id="btn-reset-mistakes" class="setting-btn-danger">Reset</button>
+            </div>
           </div>
         </details>
 
@@ -97,6 +101,24 @@
               <span id="learn-current-leaves" class="learn-stat-value">—</span>
             </div>
           </div>
+          <div class="learn-stats" style="margin-top: 10px;">
+            <div class="learn-stat-row">
+              <span class="learn-stat-label">File mistakes:</span>
+              <span id="learn-file-mistakes" class="learn-stat-value">0</span>
+            </div>
+            <div class="learn-stat-row">
+              <span class="learn-stat-label">Start mistakes:</span>
+              <span id="learn-start-mistakes" class="learn-stat-value">0</span>
+            </div>
+            <div class="learn-stat-row">
+              <span class="learn-stat-label">Current mistakes:</span>
+              <span id="learn-current-mistakes" class="learn-stat-value">0</span>
+            </div>
+          </div>
+          <details id="mistakes-box">
+            <summary>Mistakes list</summary>
+            <div id="mistakes-list" class="mistakes-list"></div>
+          </details>
         </div>
       </div>
     </div>

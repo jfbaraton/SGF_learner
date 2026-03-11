@@ -62,6 +62,10 @@ class App {
     this.learnFileLeaves = document.getElementById('learn-file-leaves');
     this.learnStartLeaves = document.getElementById('learn-start-leaves');
     this.learnCurrentLeaves = document.getElementById('learn-current-leaves');
+    this.learnFileMistakes = document.getElementById('learn-file-mistakes');
+    this.learnStartMistakes = document.getElementById('learn-start-mistakes');
+    this.learnCurrentMistakes = document.getElementById('learn-current-mistakes');
+    this.mistakesList = document.getElementById('mistakes-list');
 
     // Buttons
     this.btnStart = document.getElementById('btn-start');
@@ -82,12 +86,19 @@ class App {
     this.settingBoardSize = document.getElementById('setting-boardsize');
     this.settingVaryOrientation = document.getElementById('setting-vary-orientation');
     this.btnResetLeaves = document.getElementById('btn-reset-leaves');
+    this.btnResetMistakes = document.getElementById('btn-reset-mistakes');
 
     // Restore persisted settings
     this._loadSettings();
 
     // Found leaves tracking
     this.foundLeaves = this._loadFoundLeaves();
+
+    // Mistakes tracking: array of {path: number[], x: number, y: number}
+    this.mistakes = this._loadMistakes();
+
+    // Temporary extra marks for displaying mistake cross
+    this.extraMarks = [];
   }
 
   start() {
@@ -192,6 +203,50 @@ class App {
     } catch (e) {
       // localStorage may be unavailable
     }
+  }
+
+  _loadMistakes() {
+    const MISTAKES_KEY = 'sgf-explorer-mistakes';
+    try {
+      const data = JSON.parse(localStorage.getItem(MISTAKES_KEY));
+      if (Array.isArray(data)) {
+        return data;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return [];
+  }
+
+  _saveMistakes() {
+    const MISTAKES_KEY = 'sgf-explorer-mistakes';
+    try {
+      localStorage.setItem(MISTAKES_KEY, JSON.stringify(this.mistakes));
+    } catch (e) {
+      // localStorage may be unavailable
+    }
+  }
+
+  /**
+   * Record a wrong move at the current position.
+   * @param {number} x
+   * @param {number} y
+   */
+  _recordMistake(x, y) {
+    const path = this.nav.getPath();
+    this.mistakes.push({ path, x, y });
+    this._saveMistakes();
+    this._flashRed();
+    this._updateLearnStats();
+  }
+
+  _flashRed() {
+    this.boardContainer.classList.remove('flash-red');
+    void this.boardContainer.offsetWidth;
+    this.boardContainer.classList.add('flash-red');
+    this.boardContainer.addEventListener('animationend', () => {
+      this.boardContainer.classList.remove('flash-red');
+    }, { once: true });
   }
 
   /**
@@ -331,6 +386,13 @@ class App {
         this._updateLearnStats();
       }
     });
+    this.btnResetMistakes.addEventListener('click', () => {
+      if (confirm('Reset all mistakes? This cannot be undone.')) {
+        this.mistakes = [];
+        this._saveMistakes();
+        this._updateLearnStats();
+      }
+    });
   }
 
   _next() {
@@ -431,6 +493,10 @@ class App {
   }
 
   _handleBoardClick(x, y) {
+    // Ignore clicks on occupied intersections
+    const board = this.nav.getBoard();
+    if (board[y] && board[y][x] !== 0) return;
+
     // Find if any branch leads to a move at (x, y)
     const branches = this.nav.getBranches();
     for (const branch of branches) {
@@ -444,11 +510,41 @@ class App {
       }
 
       if (mx === x && my === y) {
+        this.extraMarks = [];
         this.selectedBranch = branch.index;
         this._next();
         return;
       }
     }
+
+    // If not a leaf and move doesn't match any branch, it's a mistake
+    if (!this.nav.isLeaf() && branches.length > 0) {
+      this._recordMistake(x, y);
+
+      // Show the wrong move as a cross mark temporarily
+      this.extraMarks = [{ x, y, type: 'cross' }];
+      this._renderWithExtraMarks();
+
+      // Clear the cross after a delay
+      setTimeout(() => {
+        this.extraMarks = [];
+        this._renderWithExtraMarks();
+      }, 1200);
+    }
+  }
+
+  /**
+   * Re-render the board with any extra marks overlaid.
+   */
+  _renderWithExtraMarks() {
+    const board = this.nav.getBoard();
+    const info = this.nav.getCurrentInfo();
+    // Merge extra marks with SGF marks
+    const mergedInfo = {
+      ...info,
+      marks: [...(info.marks || []), ...this.extraMarks],
+    };
+    this.renderer.render(board, mergedInfo);
   }
 
   _updateDisplay() {
@@ -537,6 +633,125 @@ class App {
       // ignore
     }
     this.learnStartLeaves.textContent = startText;
+
+    // Mistake counts
+    const currentPathKey = currentPath.join(',');
+    let startPathKey = null;
+    try {
+      const pathStr = localStorage.getItem('sgf-explorer-saved-start');
+      if (pathStr) {
+        const path = JSON.parse(pathStr);
+        if (Array.isArray(path)) startPathKey = path.join(',');
+      }
+    } catch (e) { /* ignore */ }
+
+    let fileMistakes = 0;
+    let startMistakes = 0;
+    let currentMistakes = 0;
+
+    for (const m of this.mistakes) {
+      const mKey = m.path.join(',');
+      fileMistakes++;
+      if (startPathKey !== null && (mKey === startPathKey || mKey.startsWith(startPathKey + ','))) {
+        startMistakes++;
+      }
+      if (mKey === currentPathKey || mKey.startsWith(currentPathKey + ',')) {
+        currentMistakes++;
+      }
+    }
+
+    this.learnFileMistakes.textContent = fileMistakes;
+    this.learnFileMistakes.classList.toggle('has-mistakes', fileMistakes > 0);
+    this.learnStartMistakes.textContent = startPathKey !== null ? startMistakes : '—';
+    this.learnStartMistakes.classList.toggle('has-mistakes', startMistakes > 0);
+    this.learnCurrentMistakes.textContent = currentMistakes;
+    this.learnCurrentMistakes.classList.toggle('has-mistakes', currentMistakes > 0);
+
+    // Populate mistakes list
+    this._renderMistakesList();
+  }
+
+  _renderMistakesList() {
+    this.mistakesList.innerHTML = '';
+    if (this.mistakes.length === 0) {
+      this.mistakesList.innerHTML = '<div style="font-size:0.75rem;color:#606080;font-style:italic;">No mistakes yet.</div>';
+      return;
+    }
+
+    for (let i = 0; i < this.mistakes.length; i++) {
+      const m = this.mistakes[i];
+      const el = document.createElement('div');
+      el.className = 'mistake-item';
+
+      // Build a human-readable path for the mistake
+      const moveCoord = this.nav.coordToString(m.x, m.y);
+      const pathDesc = this._mistakePathToString(m.path);
+      el.textContent = `${pathDesc} ✕${moveCoord}`;
+      el.title = `Click to navigate to this mistake`;
+
+      el.addEventListener('click', () => {
+        this._navigateToMistake(i);
+      });
+
+      this.mistakesList.appendChild(el);
+    }
+  }
+
+  /**
+   * Convert a mistake's path (branch indices) to a human-readable move sequence.
+   */
+  _mistakePathToString(path) {
+    if (path.length === 0) return 'Root';
+    const parts = [];
+    let node = this.nav.root;
+    for (const idx of path) {
+      const children = node.children || [];
+      if (idx >= children.length) break;
+      node = children[idx];
+      const data = node.data || {};
+      if (data.B && data.B[0] && data.B[0].length === 2) {
+        const [x, y] = parseVertex(data.B[0]);
+        parts.push(`B${this.nav.coordToString(x, y)}`);
+      } else if (data.W && data.W[0] && data.W[0].length === 2) {
+        const [x, y] = parseVertex(data.W[0]);
+        parts.push(`W${this.nav.coordToString(x, y)}`);
+      }
+    }
+    return parts.join(' → ') || 'Root';
+  }
+
+  /**
+   * Navigate to a mistake's parent position and show the wrong move as a cross mark.
+   */
+  _navigateToMistake(index) {
+    const m = this.mistakes[index];
+    if (!m) return;
+
+    this.nav.goToPath(m.path);
+    this.selectedBranch = 0;
+
+    // Show the wrong move as a persistent cross mark
+    this.extraMarks = [{ x: m.x, y: m.y, type: 'cross' }];
+
+    const board = this.nav.getBoard();
+    const info = this.nav.getCurrentInfo();
+    const mergedInfo = {
+      ...info,
+      marks: [...(info.marks || []), ...this.extraMarks],
+    };
+    this.renderer.render(board, mergedInfo);
+
+    // Update non-render display elements
+    this.commentText.textContent = info.comment || '';
+    this.moveCounter.textContent = `Move ${info.depth}`;
+    this.pathDisplay.textContent = this.nav.getPathString() || 'Start position';
+    this._updateBranchSelect();
+    this.btnPass.disabled = this.nav.findPassBranch() < 0;
+    try {
+      this.btnSavedStart.disabled = !localStorage.getItem('sgf-explorer-saved-start');
+    } catch (e) {
+      this.btnSavedStart.disabled = true;
+    }
   }
 
   _updateBranchSelect() {

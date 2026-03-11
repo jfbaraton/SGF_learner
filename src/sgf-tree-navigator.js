@@ -381,6 +381,13 @@ export default class SGFTreeNavigator {
   }
 
   /**
+   * Public coordinate to string conversion.
+   */
+  coordToString(x, y) {
+    return this._coordToString(x, y);
+  }
+
+  /**
    * Get current board state
    * @returns {number[][]} 2D array, 0=empty, 1=black, 2=white
    */
