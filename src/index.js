@@ -65,6 +65,13 @@ class App {
     this.btnFwdTen = document.getElementById('btn-fwd-10');
     this.btnEnd = document.getElementById('btn-end');
     this.btnPass = document.getElementById('btn-pass');
+
+    // Settings
+    this.settingCoords = document.getElementById('setting-coords');
+    this.settingLabels = document.getElementById('setting-labels');
+    this.settingMarks = document.getElementById('setting-marks');
+    this.settingLastMove = document.getElementById('setting-lastmove');
+    this.settingBoardSize = document.getElementById('setting-boardsize');
   }
 
   start() {
@@ -129,6 +136,29 @@ class App {
     this.renderer.onIntersectionClick = (x, y) => {
       this._handleBoardClick(x, y);
     };
+
+    // Settings
+    this.settingCoords.addEventListener('change', () => {
+      this.renderer.showCoordinates = this.settingCoords.checked;
+      this._updateDisplay();
+    });
+    this.settingLabels.addEventListener('change', () => {
+      this.renderer.showLabels = this.settingLabels.checked;
+      this._updateDisplay();
+    });
+    this.settingMarks.addEventListener('change', () => {
+      this.renderer.showMarks = this.settingMarks.checked;
+      this._updateDisplay();
+    });
+    this.settingLastMove.addEventListener('change', () => {
+      this.renderer.showLastMove = this.settingLastMove.checked;
+      this._updateDisplay();
+    });
+    this.settingBoardSize.addEventListener('input', () => {
+      const newCellSize = parseInt(this.settingBoardSize.value, 10);
+      this.renderer.resize(newCellSize);
+      this._updateDisplay();
+    });
   }
 
   _next() {

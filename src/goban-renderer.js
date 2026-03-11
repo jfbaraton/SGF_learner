@@ -36,6 +36,12 @@ export default class GobanRenderer {
       ghostWhite: 'rgba(255,255,255,0.3)',
     };
 
+    // Display options
+    this.showCoordinates = true;
+    this.showLabels = true;
+    this.showMarks = true;
+    this.showLastMove = true;
+
     // Click handler
     this.onIntersectionClick = null;
     this.canvas.addEventListener('click', (e) => this._handleClick(e));
@@ -46,6 +52,22 @@ export default class GobanRenderer {
     this.canvas.addEventListener('mouseleave', () => {
       this.hoverPos = null;
     });
+  }
+
+  /**
+   * Resize the board by changing cell size
+   * @param {number} newCellSize
+   */
+  resize(newCellSize) {
+    this.cellSize = newCellSize;
+    this.stoneRadius = this.cellSize * 0.46;
+    this.padding = Math.round(newCellSize * 0.93);
+
+    const totalSize = this.padding * 2 + this.cellSize * (this.boardSize - 1);
+    this.canvas.width = totalSize;
+    this.canvas.height = totalSize;
+    this.canvas.style.width = `${totalSize}px`;
+    this.canvas.style.height = `${totalSize}px`;
   }
 
   _coordToPixel(x, y) {
@@ -100,18 +122,20 @@ export default class GobanRenderer {
 
     this._drawGrid();
     this._drawStarPoints();
-    this._drawCoordinates();
+    if (this.showCoordinates) {
+      this._drawCoordinates();
+    }
     this._drawStones(boardState);
 
-    if (info.move && !info.move.pass) {
+    if (this.showLastMove && info.move && !info.move.pass) {
       this._drawLastMoveIndicator(info.move.x, info.move.y);
     }
 
-    if (info.labels && info.labels.length > 0) {
+    if (this.showLabels && info.labels && info.labels.length > 0) {
       this._drawLabels(info.labels, boardState);
     }
 
-    if (info.marks && info.marks.length > 0) {
+    if (this.showMarks && info.marks && info.marks.length > 0) {
       this._drawMarks(info.marks, boardState);
     }
   }

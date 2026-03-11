@@ -36,7 +36,33 @@
       </div>
 
       <div id="info-panel">
-        <div id="comment-box">
+        <details id="settings-box" class="panel-box">
+          <summary><h3>⚙ Settings</h3></summary>
+          <div class="settings-content">
+            <div class="setting-row">
+              <label for="setting-coords">Show coordinates</label>
+              <input type="checkbox" id="setting-coords" checked />
+            </div>
+            <div class="setting-row">
+              <label for="setting-labels">Show labels</label>
+              <input type="checkbox" id="setting-labels" checked />
+            </div>
+            <div class="setting-row">
+              <label for="setting-marks">Show marks</label>
+              <input type="checkbox" id="setting-marks" checked />
+            </div>
+            <div class="setting-row">
+              <label for="setting-lastmove">Show last move indicator</label>
+              <input type="checkbox" id="setting-lastmove" checked />
+            </div>
+            <div class="setting-row">
+              <label for="setting-boardsize">Board scale</label>
+              <input type="range" id="setting-boardsize" min="20" max="50" value="30" />
+            </div>
+          </div>
+        </details>
+
+        <div id="comment-box" class="panel-box">
           <h3>Comments</h3>
           <div id="comment-text"></div>
         </div>
