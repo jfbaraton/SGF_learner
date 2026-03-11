@@ -11,7 +11,7 @@ function showLoading() {
   overlay.id = 'loading-overlay';
   overlay.innerHTML = `
     <div class="spinner"></div>
-    <div class="text">Parsing Kogo's Joseki Dictionary…</div>
+    <div class="text">Parsing SGF…</div>
   `;
   document.body.appendChild(overlay);
 }
