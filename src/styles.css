@@ -159,7 +159,8 @@ header h1 {
 
 #comment-box,
 #path-box,
-#settings-box {
+#settings-box,
+#learn-box {
   background: #16213e;
   border-radius: 8px;
   padding: 16px;
@@ -168,13 +169,38 @@ header h1 {
 
 #comment-box h3,
 #path-box h3,
-#settings-box h3 {
+#settings-box h3,
+#learn-box h3 {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #e0c080;
   margin-bottom: 10px;
   font-weight: 500;
+}
+
+/* Learn stats */
+.learn-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.learn-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.learn-stat-label {
+  color: #a0a0b0;
+}
+
+.learn-stat-value {
+  color: #d0d0d0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.85rem;
 }
 
 /* Settings section */

@@ -57,6 +57,11 @@ class App {
     this.moveCounter = document.getElementById('move-counter');
     this.pathDisplay = document.getElementById('path-display');
 
+    // Learn stats
+    this.learnFileLeaves = document.getElementById('learn-file-leaves');
+    this.learnStartLeaves = document.getElementById('learn-start-leaves');
+    this.learnCurrentLeaves = document.getElementById('learn-current-leaves');
+
     // Buttons
     this.btnStart = document.getElementById('btn-start');
     this.btnBackTen = document.getElementById('btn-back-10');
@@ -403,6 +408,47 @@ class App {
     } catch (e) {
       this.btnSavedStart.disabled = true;
     }
+
+    // Update Learn stats
+    this._updateLearnStats();
+  }
+
+  _updateLearnStats() {
+    // File leaves (cached)
+    this.learnFileLeaves.textContent = `${this.nav.getTotalLeaves()} leaves`;
+
+    // Current position leaves
+    this.learnCurrentLeaves.textContent = `${this.nav.getCurrentLeaves()} leaves`;
+
+    // Start position leaves
+    const SAVED_START_KEY = 'sgf-explorer-saved-start';
+    let startLeaves = '—';
+    try {
+      const pathStr = localStorage.getItem(SAVED_START_KEY);
+      if (pathStr) {
+        const path = JSON.parse(pathStr);
+        if (Array.isArray(path)) {
+          // Walk the tree from root following the path to find the start node
+          let node = this.nav.root;
+          let valid = true;
+          for (const idx of path) {
+            const children = node.children || [];
+            if (idx < children.length) {
+              node = children[idx];
+            } else {
+              valid = false;
+              break;
+            }
+          }
+          if (valid) {
+            startLeaves = `${this.nav.countLeaves(node)} leaves`;
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    this.learnStartLeaves.textContent = startLeaves;
   }
 
   _updateBranchSelect() {

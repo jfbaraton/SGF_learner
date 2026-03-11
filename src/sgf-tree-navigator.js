@@ -426,5 +426,47 @@ export default class SGFTreeNavigator {
     }
     return parts.join(' → ');
   }
+
+  /**
+   * Count the number of leaf nodes (end-of-line positions) in the subtree
+   * rooted at the given node. Uses an iterative approach for large trees.
+   * @param {object} node - tree node to count from
+   * @returns {number}
+   */
+  countLeaves(node) {
+    let count = 0;
+    const stack = [node];
+    while (stack.length > 0) {
+      const n = stack.pop();
+      const children = n.children || [];
+      if (children.length === 0) {
+        count++;
+      } else {
+        for (const child of children) {
+          stack.push(child);
+        }
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Total leaves in the entire SGF file (cached after first call).
+   * @returns {number}
+   */
+  getTotalLeaves() {
+    if (this._totalLeaves === undefined) {
+      this._totalLeaves = this.countLeaves(this.root);
+    }
+    return this._totalLeaves;
+  }
+
+  /**
+   * Leaves reachable from the current node.
+   * @returns {number}
+   */
+  getCurrentLeaves() {
+    return this.countLeaves(this.currentNode);
+  }
 }
 
