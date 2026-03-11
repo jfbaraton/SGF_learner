@@ -41,6 +41,7 @@ export default class GobanRenderer {
     this.showLabels = true;
     this.showMarks = true;
     this.showLastMove = true;
+    this.rotation = 0; // 0=none, 1=90°CW, 2=180°, 3=270°CW
 
     // Click handler
     this.onIntersectionClick = null;
@@ -70,18 +71,46 @@ export default class GobanRenderer {
     this.canvas.style.height = `${totalSize}px`;
   }
 
+  /**
+   * Transform logical (x,y) to display (x,y) based on rotation
+   */
+  _rotateCoord(x, y) {
+    const max = this.boardSize - 1;
+    switch (this.rotation) {
+      case 1: return { x: max - y, y: x };        // 90° CW
+      case 2: return { x: max - x, y: max - y };   // 180°
+      case 3: return { x: y, y: max - x };          // 270° CW
+      default: return { x, y };                      // 0°
+    }
+  }
+
+  /**
+   * Transform display (x,y) back to logical (x,y) — inverse rotation
+   */
+  _unrotateCoord(x, y) {
+    const max = this.boardSize - 1;
+    switch (this.rotation) {
+      case 1: return { x: y, y: max - x };
+      case 2: return { x: max - x, y: max - y };
+      case 3: return { x: max - y, y: x };
+      default: return { x, y };
+    }
+  }
+
   _coordToPixel(x, y) {
+    const r = this._rotateCoord(x, y);
     return {
-      px: this.padding + x * this.cellSize,
-      py: this.padding + y * this.cellSize,
+      px: this.padding + r.x * this.cellSize,
+      py: this.padding + r.y * this.cellSize,
     };
   }
 
   _pixelToCoord(px, py) {
-    const x = Math.round((px - this.padding) / this.cellSize);
-    const y = Math.round((py - this.padding) / this.cellSize);
-    if (x >= 0 && x < this.boardSize && y >= 0 && y < this.boardSize) {
-      return { x, y };
+    const dx = Math.round((px - this.padding) / this.cellSize);
+    const dy = Math.round((py - this.padding) / this.cellSize);
+    if (dx >= 0 && dx < this.boardSize && dy >= 0 && dy < this.boardSize) {
+      const logical = this._unrotateCoord(dx, dy);
+      return { x: logical.x, y: logical.y };
     }
     return null;
   }

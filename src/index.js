@@ -72,6 +72,7 @@ class App {
     this.settingMarks = document.getElementById('setting-marks');
     this.settingLastMove = document.getElementById('setting-lastmove');
     this.settingBoardSize = document.getElementById('setting-boardsize');
+    this.settingVaryOrientation = document.getElementById('setting-vary-orientation');
 
     // Restore persisted settings
     this._loadSettings();
@@ -112,6 +113,9 @@ class App {
       this.settingBoardSize.value = saved.boardScale;
       this.renderer.resize(saved.boardScale);
     }
+    if (typeof saved.varyOrientation === 'boolean') {
+      this.settingVaryOrientation.checked = saved.varyOrientation;
+    }
   }
 
   _saveSettings() {
@@ -122,6 +126,7 @@ class App {
       showMarks: this.settingMarks.checked,
       showLastMove: this.settingLastMove.checked,
       boardScale: parseInt(this.settingBoardSize.value, 10),
+      varyOrientation: this.settingVaryOrientation.checked,
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
@@ -215,6 +220,13 @@ class App {
       this._saveSettings();
       this._updateDisplay();
     });
+    this.settingVaryOrientation.addEventListener('change', () => {
+      if (!this.settingVaryOrientation.checked) {
+        this.renderer.rotation = 0;
+        this._updateDisplay();
+      }
+      this._saveSettings();
+    });
   }
 
   _next() {
@@ -234,6 +246,9 @@ class App {
   _goToStart() {
     this.nav.goToStart();
     this.selectedBranch = 0;
+    if (this.settingVaryOrientation.checked) {
+      this.renderer.rotation = Math.floor(Math.random() * 4);
+    }
     this._updateDisplay();
   }
 
