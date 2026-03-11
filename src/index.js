@@ -72,11 +72,62 @@ class App {
     this.settingMarks = document.getElementById('setting-marks');
     this.settingLastMove = document.getElementById('setting-lastmove');
     this.settingBoardSize = document.getElementById('setting-boardsize');
+
+    // Restore persisted settings
+    this._loadSettings();
   }
 
   start() {
     this._bindEvents();
     this._updateDisplay();
+  }
+
+  _loadSettings() {
+    const STORAGE_KEY = 'sgf-explorer-settings';
+    let saved;
+    try {
+      saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    } catch (e) {
+      // ignore corrupt data
+    }
+    if (!saved) return;
+
+    if (typeof saved.showCoordinates === 'boolean') {
+      this.settingCoords.checked = saved.showCoordinates;
+      this.renderer.showCoordinates = saved.showCoordinates;
+    }
+    if (typeof saved.showLabels === 'boolean') {
+      this.settingLabels.checked = saved.showLabels;
+      this.renderer.showLabels = saved.showLabels;
+    }
+    if (typeof saved.showMarks === 'boolean') {
+      this.settingMarks.checked = saved.showMarks;
+      this.renderer.showMarks = saved.showMarks;
+    }
+    if (typeof saved.showLastMove === 'boolean') {
+      this.settingLastMove.checked = saved.showLastMove;
+      this.renderer.showLastMove = saved.showLastMove;
+    }
+    if (typeof saved.boardScale === 'number') {
+      this.settingBoardSize.value = saved.boardScale;
+      this.renderer.resize(saved.boardScale);
+    }
+  }
+
+  _saveSettings() {
+    const STORAGE_KEY = 'sgf-explorer-settings';
+    const settings = {
+      showCoordinates: this.settingCoords.checked,
+      showLabels: this.settingLabels.checked,
+      showMarks: this.settingMarks.checked,
+      showLastMove: this.settingLastMove.checked,
+      boardScale: parseInt(this.settingBoardSize.value, 10),
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    } catch (e) {
+      // localStorage may be unavailable
+    }
   }
 
   _bindEvents() {
@@ -140,23 +191,28 @@ class App {
     // Settings
     this.settingCoords.addEventListener('change', () => {
       this.renderer.showCoordinates = this.settingCoords.checked;
+      this._saveSettings();
       this._updateDisplay();
     });
     this.settingLabels.addEventListener('change', () => {
       this.renderer.showLabels = this.settingLabels.checked;
+      this._saveSettings();
       this._updateDisplay();
     });
     this.settingMarks.addEventListener('change', () => {
       this.renderer.showMarks = this.settingMarks.checked;
+      this._saveSettings();
       this._updateDisplay();
     });
     this.settingLastMove.addEventListener('change', () => {
       this.renderer.showLastMove = this.settingLastMove.checked;
+      this._saveSettings();
       this._updateDisplay();
     });
     this.settingBoardSize.addEventListener('input', () => {
       const newCellSize = parseInt(this.settingBoardSize.value, 10);
       this.renderer.resize(newCellSize);
+      this._saveSettings();
       this._updateDisplay();
     });
   }
