@@ -223,8 +223,74 @@ header h1 {
   font-weight: 500;
 }
 
+/* Learn header with serious toggle */
+.learn-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.learn-header h3 {
+  margin-bottom: 0 !important;
+}
+
+.serious-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.serious-label {
+  font-size: 0.75rem;
+  color: #a0a0b0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.serious-toggle input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 38px;
+  height: 20px;
+  background: #0f3460;
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.serious-toggle input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #a0a0b0;
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.serious-toggle input[type="checkbox"]:checked {
+  background: #e94560;
+}
+
+.serious-toggle input[type="checkbox"]:checked::after {
+  transform: translateX(18px);
+  background: #1a1a2e;
+}
+
+/* Serious mode: hide branch controls */
+body.serious-mode #branch-controls {
+  display: none;
+}
+
 /* Learn stats */
 .learn-stats {
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -249,6 +315,10 @@ header h1 {
 
 .learn-stat-value.has-mistakes {
   color: #e09090;
+}
+
+.learn-stat-value.completed {
+  color: #4caf50;
 }
 
 /* Mistakes list (foldable) */

@@ -101,6 +101,7 @@ class App {
     this.settingLastMove = document.getElementById('setting-lastmove');
     this.settingBoardSize = document.getElementById('setting-boardsize');
     this.settingVaryOrientation = document.getElementById('setting-vary-orientation');
+    this.settingSerious = document.getElementById('setting-serious');
     this.btnResetLeaves = document.getElementById('btn-reset-leaves');
     this.btnUploadSgf = document.getElementById('btn-upload-sgf');
     this.btnDownloadSgf = document.getElementById('btn-download-sgf');
@@ -183,6 +184,10 @@ class App {
     if (typeof saved.varyOrientation === 'boolean') {
       this.settingVaryOrientation.checked = saved.varyOrientation;
     }
+    if (typeof saved.seriousMode === 'boolean') {
+      this.settingSerious.checked = saved.seriousMode;
+      this._applySeriousMode(saved.seriousMode);
+    }
   }
 
   _saveSettings() {
@@ -194,6 +199,7 @@ class App {
       showLastMove: this.settingLastMove.checked,
       boardScale: parseInt(this.settingBoardSize.value, 10),
       varyOrientation: this.settingVaryOrientation.checked,
+      seriousMode: this.settingSerious.checked,
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
@@ -328,6 +334,16 @@ class App {
     }, { once: true });
   }
 
+  /**
+   * Apply serious mode: toggle body class, disable/enable forward nav buttons.
+   */
+  _applySeriousMode(active) {
+    document.body.classList.toggle('serious-mode', active);
+    this.btnNext.disabled = active;
+    this.btnFwdTen.disabled = active;
+    this.btnEnd.disabled = active;
+  }
+
   _bindEvents() {
     this.btnStart.addEventListener('click', () => this._goToStart());
     this.btnBackTen.addEventListener('click', () => this._backN(10));
@@ -344,6 +360,12 @@ class App {
       this.selectedBranch = parseInt(e.target.value, 10);
     });
 
+    // Serious mode toggle
+    this.settingSerious.addEventListener('change', () => {
+      this._applySeriousMode(this.settingSerious.checked);
+      this._saveSettings();
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       // Don't capture when select is focused
@@ -358,15 +380,15 @@ class App {
           break;
         case 'ArrowRight':
           e.preventDefault();
-          this._next();
+          if (!this.settingSerious.checked) this._next();
           break;
         case 'ArrowUp':
           e.preventDefault();
-          this._prevBranch();
+          if (!this.settingSerious.checked) this._prevBranch();
           break;
         case 'ArrowDown':
           e.preventDefault();
-          this._nextBranch();
+          if (!this.settingSerious.checked) this._nextBranch();
           break;
         case 'Home':
           e.preventDefault();
@@ -374,12 +396,12 @@ class App {
           break;
         case 'End':
           e.preventDefault();
-          this._goToEnd();
+          if (!this.settingSerious.checked) this._goToEnd();
           break;
         case 'p':
         case 'P':
           e.preventDefault();
-          this._pass();
+          if (!this.settingSerious.checked) this._pass();
           break;
       }
     });
@@ -730,6 +752,11 @@ class App {
     // Update pass button availability
     this.btnPass.disabled = this.nav.findPassBranch() < 0;
 
+    // Re-apply serious mode constraints
+    if (this.settingSerious.checked) {
+      this._applySeriousMode(true);
+    }
+
     // Update saved start button availability
     try {
       this.btnSavedStart.disabled = !localStorage.getItem('sgf-explorer-saved-start');
@@ -791,12 +818,15 @@ class App {
     // File scope: all leaves from root
     const fileStats = this.nav.countFoundLeaves(this.nav.root, [], foundSet);
     this.learnFileLeaves.textContent = fmt(fileStats.found, fileStats.total, fileMistakes);
+    this.learnFileLeaves.classList.toggle('completed', fileStats.total > 0 && fileStats.found === fileStats.total);
 
     this.learnCurrentLeaves.textContent = fmt(currentStats.found, currentStats.total, currentMistakes);
+    this.learnCurrentLeaves.classList.toggle('completed', currentStats.total > 0 && currentStats.found === currentStats.total);
 
     // Start position scope
     const SAVED_START_KEY = 'sgf-explorer-saved-start';
     let startText = '—';
+    let startCompleted = false;
     try {
       const pathStr = localStorage.getItem(SAVED_START_KEY);
       if (pathStr) {
@@ -815,7 +845,8 @@ class App {
           }
           if (valid) {
             const startStats = this.nav.countFoundLeaves(node, path, foundSet);
-            startText = fmt(startStats.found, startStats.total, currentMistakes);
+            startText = fmt(startStats.found, startStats.total, startMistakes);
+            startCompleted = startStats.total > 0 && startStats.found === startStats.total;
           }
         }
       }
@@ -823,6 +854,7 @@ class App {
       // ignore
     }
     this.learnStartLeaves.textContent = startText;
+    this.learnStartLeaves.classList.toggle('completed', startCompleted);
 
 
     // Populate mistakes list
