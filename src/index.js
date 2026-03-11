@@ -325,6 +325,7 @@ class App {
       // localStorage may be unavailable
     }
     this.btnSavedStart.disabled = false;
+    this._updateLearnStats();
   }
 
   _goToSavedStart() {
