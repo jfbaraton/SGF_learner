@@ -388,6 +388,64 @@ export default class SGFTreeNavigator {
   }
 
   /**
+   * Get the bookmark name from the current node's comment, if any.
+   * Bookmark format: "Bookmarked - NAME." at the start of the comment.
+   * @returns {string|null} the bookmark name, or null if not bookmarked
+   */
+  getBookmark() {
+    const data = this.currentNode.data || {};
+    const comment = data.C ? data.C[0] : '';
+    const match = comment.match(/^Bookmarked - ([^.]*)\./);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * Set or update a bookmark on the current node.
+   * Prepends/replaces "Bookmarked - NAME." at the start of the comment.
+   * @param {string} name - bookmark name (dots will be stripped)
+   */
+  setBookmark(name) {
+    const cleanName = name.replace(/\./g, '');
+    if (!this.currentNode.data) {
+      this.currentNode.data = {};
+    }
+    const data = this.currentNode.data;
+    const existing = data.C ? data.C[0] : '';
+    const prefix = `Bookmarked - ${cleanName}.`;
+
+    if (existing.match(/^Bookmarked - [^.]*\./)) {
+      // Replace existing bookmark prefix
+      data.C = [existing.replace(/^Bookmarked - [^.]*\./, prefix)];
+    } else {
+      // Prepend bookmark prefix
+      data.C = [existing ? `${prefix} ${existing}` : prefix];
+    }
+  }
+
+  /**
+   * Walk the entire tree and collect all bookmarked nodes with their paths.
+   * @returns {Array<{name: string, path: number[]}>}
+   */
+  getAllBookmarks() {
+    const bookmarks = [];
+    const stack = [{ node: this.root, path: [] }];
+    while (stack.length > 0) {
+      const { node, path } = stack.pop();
+      const data = node.data || {};
+      const comment = data.C ? data.C[0] : '';
+      const match = comment.match(/^Bookmarked - ([^.]*)\./);
+      if (match) {
+        bookmarks.push({ name: match[1], path: [...path] });
+      }
+      const children = node.children || [];
+      for (let i = 0; i < children.length; i++) {
+        stack.push({ node: children[i], path: [...path, i] });
+      }
+    }
+    return bookmarks;
+  }
+
+  /**
    * Get current board state
    * @returns {number[][]} 2D array, 0=empty, 1=black, 2=white
    */

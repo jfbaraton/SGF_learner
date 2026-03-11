@@ -191,7 +191,8 @@ header h1 {
 #comment-box,
 #path-box,
 #settings-box,
-#learn-box {
+#learn-box,
+#bookmarks-box {
   background: #16213e;
   border-radius: 8px;
   padding: 16px;
@@ -201,7 +202,8 @@ header h1 {
 #comment-box h3,
 #path-box h3,
 #settings-box h3,
-#learn-box h3 {
+#learn-box h3,
+#bookmarks-box h3 {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -301,6 +303,98 @@ header h1 {
 .mistakes-list::-webkit-scrollbar-thumb {
   background: #e09090;
   border-radius: 3px;
+}
+
+/* Bookmarks section */
+#bookmarks-box summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+#bookmarks-box summary::-webkit-details-marker {
+  display: none;
+}
+
+#bookmarks-box summary h3 {
+  display: inline;
+  margin-bottom: 0;
+}
+
+#bookmarks-box summary h3::after {
+  content: ' ▸';
+  font-size: 0.75rem;
+}
+
+#bookmarks-box[open] summary h3::after {
+  content: ' ▾';
+}
+
+.bookmarks-list {
+  margin-top: 10px;
+  max-height: 250px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bookmarks-list:empty::after {
+  content: 'No bookmarks yet.';
+  font-size: 0.75rem;
+  color: #606080;
+  font-style: italic;
+}
+
+.bookmark-item {
+  font-size: 0.8rem;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bookmark-item:hover {
+  background: #1a2a4e;
+}
+
+.bookmark-item .bookmark-name {
+  color: #e0c080;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-item .bookmark-path {
+  color: #808090;
+  font-size: 0.7rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  white-space: nowrap;
+}
+
+.bookmarks-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.bookmarks-list::-webkit-scrollbar-track {
+  background: #0f3460;
+  border-radius: 3px;
+}
+
+.bookmarks-list::-webkit-scrollbar-thumb {
+  background: #e0c080;
+  border-radius: 3px;
+}
+
+#btn-bookmark {
+  font-size: 0.8rem !important;
+  letter-spacing: 0.3px;
 }
 
 /* Settings section */

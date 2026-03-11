@@ -26,9 +26,12 @@
           <button id="btn-end" title="Go to end (End)">⏭</button>
           <span class="control-separator"></span>
           <button id="btn-pass" title="Select pass variation (P)">Pass</button>
-          <span class="control-separator"></span>
+        </div>
+        <div id="controls">
           <button id="btn-save-start" title="Remember current position as the starting point">📌 Save Start</button>
           <button id="btn-saved-start" title="Back to starting point">🏁 Start</button>
+          <span class="control-separator"></span>
+          <button id="btn-bookmark" title="Bookmark current position (B)">🔖 Bookmark</button>
         </div>
 
         <div id="branch-controls">
@@ -102,6 +105,10 @@
             <div id="mistakes-list" class="mistakes-list"></div>
           </details>
         </div>
+        <details id="bookmarks-box" class="panel-box">
+          <summary><h3>🔖 Bookmarks</h3></summary>
+          <div id="bookmarks-list" class="bookmarks-list"></div>
+        </details>
       </div>
     </div>
   </div>

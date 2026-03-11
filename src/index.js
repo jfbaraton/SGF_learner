@@ -74,6 +74,10 @@ class App {
     this.btnPass = document.getElementById('btn-pass');
     this.btnSaveStart = document.getElementById('btn-save-start');
     this.btnSavedStart = document.getElementById('btn-saved-start');
+    this.btnBookmark = document.getElementById('btn-bookmark');
+
+    // Bookmarks
+    this.bookmarksList = document.getElementById('bookmarks-list');
 
     // Settings
     this.settingCoords = document.getElementById('setting-coords');
@@ -291,6 +295,7 @@ class App {
     this.btnPass.addEventListener('click', () => this._pass());
     this.btnSaveStart.addEventListener('click', () => this._saveStartPosition());
     this.btnSavedStart.addEventListener('click', () => this._goToSavedStart());
+    this.btnBookmark.addEventListener('click', () => this._addBookmark());
 
     this.branchSelect.addEventListener('change', (e) => {
       this.selectedBranch = parseInt(e.target.value, 10);
@@ -469,6 +474,75 @@ class App {
     this._updateDisplay();
   }
 
+  _addBookmark() {
+    const existing = this.nav.getBookmark();
+    const defaultName = existing || '';
+    const name = prompt('Bookmark name:', defaultName);
+    if (name === null) return; // cancelled
+    if (name.trim() === '') return; // empty
+
+    this.nav.setBookmark(name.trim());
+    this._updateDisplay();
+  }
+
+  _renderBookmarks() {
+    this.bookmarksList.innerHTML = '';
+    const bookmarks = this.nav.getAllBookmarks();
+
+    if (bookmarks.length === 0) return; // CSS :empty handles the message
+
+    // Sort bookmarks alphabetically by name
+    bookmarks.sort((a, b) => a.name.localeCompare(b.name));
+
+    for (const bm of bookmarks) {
+      const el = document.createElement('div');
+      el.className = 'bookmark-item';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'bookmark-name';
+      nameSpan.textContent = bm.name;
+
+      const pathSpan = document.createElement('span');
+      pathSpan.className = 'bookmark-path';
+      pathSpan.textContent = this._bookmarkPathToString(bm.path);
+
+      el.appendChild(nameSpan);
+      el.appendChild(pathSpan);
+      el.title = `Navigate to "${bm.name}"`;
+
+      el.addEventListener('click', () => {
+        this.nav.goToPath(bm.path);
+        this.selectedBranch = 0;
+        this.extraMarks = [];
+        this._updateDisplay();
+      });
+
+      this.bookmarksList.appendChild(el);
+    }
+  }
+
+  _bookmarkPathToString(path) {
+    if (path.length === 0) return 'Root';
+    const parts = [];
+    let node = this.nav.root;
+    for (const idx of path) {
+      const children = node.children || [];
+      if (idx >= children.length) break;
+      node = children[idx];
+      const data = node.data || {};
+      if (data.B && data.B[0] && data.B[0].length === 2) {
+        const [x, y] = parseVertex(data.B[0]);
+        parts.push(`B${this.nav.coordToString(x, y)}`);
+      } else if (data.W && data.W[0] && data.W[0].length === 2) {
+        const [x, y] = parseVertex(data.W[0]);
+        parts.push(`W${this.nav.coordToString(x, y)}`);
+      }
+    }
+    return parts.length > 3
+      ? `${parts.slice(0, 2).join('→')}…→${parts[parts.length - 1]}`
+      : parts.join(' → ') || 'Root';
+  }
+
   _prevBranch() {
     const branches = this.nav.getBranches();
     if (branches.length <= 1) return;
@@ -575,6 +649,9 @@ class App {
 
     // Update Learn stats
     this._updateLearnStats();
+
+    // Update Bookmarks list
+    this._renderBookmarks();
   }
 
   _updateLearnStats() {
