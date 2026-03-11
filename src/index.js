@@ -1,0 +1,261 @@
+import './styles.css';
+import SGFTreeNavigator from './sgf-tree-navigator';
+import GobanRenderer from './goban-renderer';
+import { parseVertex } from '@sabaki/sgf';
+import sgfContent from '../eidogo_joseki.sgf';
+
+// --- Loading overlay ---
+function showLoading() {
+  const overlay = document.createElement('div');
+  overlay.id = 'loading-overlay';
+  overlay.innerHTML = `
+    <div class="spinner"></div>
+    <div class="text">Parsing Kogo's Joseki Dictionary…</div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function hideLoading() {
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) overlay.remove();
+}
+
+// --- Main Application ---
+function init() {
+  showLoading();
+
+  // Use setTimeout to allow the loading overlay to render first
+  setTimeout(() => {
+    try {
+      const navigator = new SGFTreeNavigator(sgfContent);
+      const canvas = document.getElementById('goban');
+      const renderer = new GobanRenderer(canvas, navigator.boardSize);
+
+      const app = new App(navigator, renderer);
+      app.start();
+
+      hideLoading();
+    } catch (err) {
+      hideLoading();
+      console.error('Failed to initialize:', err);
+      document.getElementById('comment-text').textContent =
+        `Error loading SGF: ${err.message}`;
+    }
+  }, 50);
+}
+
+class App {
+  constructor(navigator, renderer) {
+    this.nav = navigator;
+    this.renderer = renderer;
+    this.selectedBranch = 0;
+
+    // DOM elements
+    this.branchSelect = document.getElementById('branch-select');
+    this.commentText = document.getElementById('comment-text');
+    this.moveCounter = document.getElementById('move-counter');
+    this.pathDisplay = document.getElementById('path-display');
+
+    // Buttons
+    this.btnStart = document.getElementById('btn-start');
+    this.btnBackTen = document.getElementById('btn-back-10');
+    this.btnPrev = document.getElementById('btn-prev');
+    this.btnNext = document.getElementById('btn-next');
+    this.btnFwdTen = document.getElementById('btn-fwd-10');
+    this.btnEnd = document.getElementById('btn-end');
+  }
+
+  start() {
+    this._bindEvents();
+    this._updateDisplay();
+  }
+
+  _bindEvents() {
+    this.btnStart.addEventListener('click', () => this._goToStart());
+    this.btnBackTen.addEventListener('click', () => this._backN(10));
+    this.btnPrev.addEventListener('click', () => this._prev());
+    this.btnNext.addEventListener('click', () => this._next());
+    this.btnFwdTen.addEventListener('click', () => this._forwardN(10));
+    this.btnEnd.addEventListener('click', () => this._goToEnd());
+
+    this.branchSelect.addEventListener('change', (e) => {
+      this.selectedBranch = parseInt(e.target.value, 10);
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Don't capture when select is focused
+      if (e.target === this.branchSelect && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        return;
+      }
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          this._prev();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          this._next();
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          this._prevBranch();
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          this._nextBranch();
+          break;
+        case 'Home':
+          e.preventDefault();
+          this._goToStart();
+          break;
+        case 'End':
+          e.preventDefault();
+          this._goToEnd();
+          break;
+      }
+    });
+
+    // Click on board intersection to select matching branch
+    this.renderer.onIntersectionClick = (x, y) => {
+      this._handleBoardClick(x, y);
+    };
+  }
+
+  _next() {
+    if (this.nav.next(this.selectedBranch)) {
+      this.selectedBranch = 0;
+      this._updateDisplay();
+    }
+  }
+
+  _prev() {
+    if (this.nav.prev()) {
+      this.selectedBranch = 0;
+      this._updateDisplay();
+    }
+  }
+
+  _goToStart() {
+    this.nav.goToStart();
+    this.selectedBranch = 0;
+    this._updateDisplay();
+  }
+
+  _goToEnd() {
+    this.nav.goToEnd();
+    this.selectedBranch = 0;
+    this._updateDisplay();
+  }
+
+  _backN(n) {
+    for (let i = 0; i < n; i++) {
+      if (!this.nav.prev()) break;
+    }
+    this.selectedBranch = 0;
+    this._updateDisplay();
+  }
+
+  _forwardN(n) {
+    for (let i = 0; i < n; i++) {
+      if (!this.nav.next(0)) break;
+    }
+    this.selectedBranch = 0;
+    this._updateDisplay();
+  }
+
+  _prevBranch() {
+    const branches = this.nav.getBranches();
+    if (branches.length <= 1) return;
+    this.selectedBranch = (this.selectedBranch - 1 + branches.length) % branches.length;
+    this.branchSelect.value = this.selectedBranch;
+  }
+
+  _nextBranch() {
+    const branches = this.nav.getBranches();
+    if (branches.length <= 1) return;
+    this.selectedBranch = (this.selectedBranch + 1) % branches.length;
+    this.branchSelect.value = this.selectedBranch;
+  }
+
+  _handleBoardClick(x, y) {
+    // Find if any branch leads to a move at (x, y)
+    const branches = this.nav.getBranches();
+    for (const branch of branches) {
+      const data = branch.node.data || {};
+      let mx = -1, my = -1;
+
+      if (data.B && data.B[0] && data.B[0].length === 2) {
+        [mx, my] = parseVertex(data.B[0]);
+      } else if (data.W && data.W[0] && data.W[0].length === 2) {
+        [mx, my] = parseVertex(data.W[0]);
+      }
+
+      if (mx === x && my === y) {
+        this.selectedBranch = branch.index;
+        this._next();
+        return;
+      }
+    }
+  }
+
+  _updateDisplay() {
+    const board = this.nav.getBoard();
+    const info = this.nav.getCurrentInfo();
+
+    // Render board
+    this.renderer.render(board, info);
+
+    // Update comment
+    this.commentText.textContent = info.comment || '';
+
+    // Update move counter
+    this.moveCounter.textContent = `Move ${info.depth}`;
+
+    // Update path
+    this.pathDisplay.textContent = this.nav.getPathString() || 'Start position';
+
+    // Update branch selector
+    this._updateBranchSelect();
+  }
+
+  _updateBranchSelect() {
+    const branches = this.nav.getBranches();
+    this.branchSelect.innerHTML = '';
+
+    if (branches.length === 0) {
+      const option = document.createElement('option');
+      option.textContent = '(end of line)';
+      option.disabled = true;
+      this.branchSelect.appendChild(option);
+      this.branchSelect.disabled = true;
+      return;
+    }
+
+    this.branchSelect.disabled = false;
+
+    for (const branch of branches) {
+      const option = document.createElement('option');
+      option.value = branch.index;
+      option.textContent = branch.description;
+      if (branch.index === this.selectedBranch) {
+        option.selected = true;
+      }
+      this.branchSelect.appendChild(option);
+    }
+
+    // Reset selected branch if out of bounds
+    if (this.selectedBranch >= branches.length) {
+      this.selectedBranch = 0;
+    }
+  }
+}
+
+// Start the app when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+

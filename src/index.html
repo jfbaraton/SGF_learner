@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SGF Joseki Explorer</title>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Kogo's Joseki Dictionary Explorer</h1>
+    </header>
+
+    <div id="main-layout">
+      <div id="board-panel">
+        <div id="board-container">
+          <canvas id="goban"></canvas>
+        </div>
+
+        <div id="controls">
+          <button id="btn-start" title="Go to start (Home)">⏮</button>
+          <button id="btn-back-10" title="Back 10 moves">⏪</button>
+          <button id="btn-prev" title="Previous move (←)">◀</button>
+          <button id="btn-next" title="Next move (→)">▶</button>
+          <button id="btn-fwd-10" title="Forward 10 moves">⏩</button>
+          <button id="btn-end" title="Go to end (End)">⏭</button>
+        </div>
+
+        <div id="branch-controls">
+          <label for="branch-select">Variations:</label>
+          <select id="branch-select"></select>
+          <span id="move-counter"></span>
+        </div>
+      </div>
+
+      <div id="info-panel">
+        <div id="comment-box">
+          <h3>Comments</h3>
+          <div id="comment-text"></div>
+        </div>
+        <div id="path-box">
+          <h3>Current Path</h3>
+          <div id="path-display"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

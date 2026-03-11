@@ -1,0 +1,365 @@
+import { parse, parseVertex } from '@sabaki/sgf';
+
+/**
+ * SGF Tree Navigator - traverses a parsed SGF game tree
+ * Each node has: { id, data, parentId, children }
+ * data keys: B, W (moves), C (comments), LB (labels), AB/AW (setup stones), etc.
+ */
+export default class SGFTreeNavigator {
+  constructor(sgfString) {
+    const rootNodes = parse(sgfString);
+    if (!rootNodes || rootNodes.length === 0) {
+      throw new Error('Failed to parse SGF file');
+    }
+
+    // We use the first game tree
+    this.root = rootNodes[0];
+
+    // Build a parent map for easy backward traversal
+    this.parentMap = new Map();
+    this._buildParentMap(this.root, null);
+
+    // Current node pointer
+    this.currentNode = this.root;
+
+    // Track the board state: a 19x19 array, 0=empty, 1=black, 2=white
+    this.boardSize = this._getBoardSize();
+    this.boardState = this._createEmptyBoard();
+    this.moveHistory = []; // stack of {node, boardSnapshot}
+
+    // Apply setup from root node
+    this._applySetup(this.root);
+    this._saveBoardSnapshot();
+  }
+
+  _buildParentMap(node, parent) {
+    this.parentMap.set(node, parent);
+    if (node.children) {
+      for (const child of node.children) {
+        this._buildParentMap(child, node);
+      }
+    }
+  }
+
+  _getBoardSize() {
+    const sz = this.root.data && this.root.data.SZ;
+    if (sz && sz.length > 0) {
+      return parseInt(sz[0], 10);
+    }
+    return 19;
+  }
+
+  _createEmptyBoard() {
+    const board = [];
+    for (let i = 0; i < this.boardSize; i++) {
+      board.push(new Array(this.boardSize).fill(0));
+    }
+    return board;
+  }
+
+  _cloneBoard() {
+    return this.boardState.map(row => [...row]);
+  }
+
+  _saveBoardSnapshot() {
+    // Save current state so we can restore on back()
+  }
+
+  _applySetup(node) {
+    const data = node.data || {};
+
+    // Add Black stones (AB)
+    if (data.AB) {
+      for (const coord of data.AB) {
+        const [x, y] = parseVertex(coord);
+        if (x >= 0 && y >= 0 && x < this.boardSize && y < this.boardSize) {
+          this.boardState[y][x] = 1;
+        }
+      }
+    }
+
+    // Add White stones (AW)
+    if (data.AW) {
+      for (const coord of data.AW) {
+        const [x, y] = parseVertex(coord);
+        if (x >= 0 && y >= 0 && x < this.boardSize && y < this.boardSize) {
+          this.boardState[y][x] = 2;
+        }
+      }
+    }
+
+    // Remove stones (AE)
+    if (data.AE) {
+      for (const coord of data.AE) {
+        const [x, y] = parseVertex(coord);
+        if (x >= 0 && y >= 0 && x < this.boardSize && y < this.boardSize) {
+          this.boardState[y][x] = 0;
+        }
+      }
+    }
+  }
+
+  _applyMove(node) {
+    const data = node.data || {};
+    let color = 0;
+    let moveCoord = null;
+
+    if (data.B && data.B.length > 0) {
+      color = 1;
+      moveCoord = data.B[0];
+    } else if (data.W && data.W.length > 0) {
+      color = 2;
+      moveCoord = data.W[0];
+    }
+
+    if (moveCoord && moveCoord.length === 2) {
+      const [x, y] = parseVertex(moveCoord);
+      if (x >= 0 && y >= 0 && x < this.boardSize && y < this.boardSize) {
+        this.boardState[y][x] = color;
+        // Remove captured stones
+        this._removeCaptures(x, y, color);
+      }
+    }
+
+    // Also apply any setup stones in this node
+    this._applySetup(node);
+  }
+
+  _removeCaptures(x, y, color) {
+    const opponent = color === 1 ? 2 : 1;
+    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+    for (const [dx, dy] of directions) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < this.boardSize && ny < this.boardSize) {
+        if (this.boardState[ny][nx] === opponent) {
+          const group = this._getGroup(nx, ny);
+          if (!this._hasLiberties(group)) {
+            for (const [gx, gy] of group) {
+              this.boardState[gy][gx] = 0;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  _getGroup(x, y) {
+    const color = this.boardState[y][x];
+    const visited = new Set();
+    const group = [];
+    const queue = [[x, y]];
+
+    while (queue.length > 0) {
+      const [cx, cy] = queue.pop();
+      const key = `${cx},${cy}`;
+      if (visited.has(key)) continue;
+      visited.add(key);
+
+      if (cx < 0 || cy < 0 || cx >= this.boardSize || cy >= this.boardSize) continue;
+      if (this.boardState[cy][cx] !== color) continue;
+
+      group.push([cx, cy]);
+
+      queue.push([cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1]);
+    }
+
+    return group;
+  }
+
+  _hasLiberties(group) {
+    for (const [x, y] of group) {
+      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      for (const [dx, dy] of directions) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx >= 0 && ny >= 0 && nx < this.boardSize && ny < this.boardSize) {
+          if (this.boardState[ny][nx] === 0) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Navigate to next node (first child or specified branch)
+   * @param {number} branchIndex - which child to follow (0 = main)
+   * @returns {boolean} true if navigation succeeded
+   */
+  next(branchIndex = 0) {
+    const children = this.currentNode.children || [];
+    if (children.length === 0) return false;
+
+    const idx = Math.min(branchIndex, children.length - 1);
+    const prevBoard = this._cloneBoard();
+
+    this.moveHistory.push({
+      node: this.currentNode,
+      board: prevBoard,
+    });
+
+    this.currentNode = children[idx];
+    this._applyMove(this.currentNode);
+    return true;
+  }
+
+  /**
+   * Navigate to previous node
+   * @returns {boolean} true if navigation succeeded
+   */
+  prev() {
+    if (this.moveHistory.length === 0) return false;
+
+    const { node, board } = this.moveHistory.pop();
+    this.currentNode = node;
+    this.boardState = board;
+    return true;
+  }
+
+  /**
+   * Go to the beginning (root node)
+   */
+  goToStart() {
+    this.currentNode = this.root;
+    this.boardState = this._createEmptyBoard();
+    this.moveHistory = [];
+    this._applySetup(this.root);
+  }
+
+  /**
+   * Follow main line (first child) to the end
+   */
+  goToEnd() {
+    while (this.next(0)) {
+      // keep going
+    }
+  }
+
+  /**
+   * Get children/branches at current node
+   * @returns {Array} branch descriptors
+   */
+  getBranches() {
+    const children = this.currentNode.children || [];
+    return children.map((child, i) => {
+      const data = child.data || {};
+      let desc = `Variation ${i + 1}`;
+
+      if (data.B && data.B[0]) {
+        const [x, y] = parseVertex(data.B[0]);
+        desc = `B ${this._coordToString(x, y)}`;
+      } else if (data.W && data.W[0]) {
+        const [x, y] = parseVertex(data.W[0]);
+        desc = `W ${this._coordToString(x, y)}`;
+      }
+
+      // Add comment preview if available
+      if (data.C && data.C[0]) {
+        const preview = data.C[0].substring(0, 40).replace(/\n/g, ' ');
+        desc += ` — ${preview}`;
+      }
+
+      // Add label info from current node
+      if (data.N && data.N[0]) {
+        desc = data.N[0];
+      }
+
+      return { index: i, description: desc, node: child };
+    });
+  }
+
+  /**
+   * Get info about the current node
+   */
+  getCurrentInfo() {
+    const data = this.currentNode.data || {};
+    return {
+      comment: data.C ? data.C[0] : null,
+      labels: this._getLabels(data),
+      marks: this._getMarks(data),
+      move: this._getMove(data),
+      nodeName: data.N ? data.N[0] : null,
+      numChildren: (this.currentNode.children || []).length,
+      depth: this.moveHistory.length,
+    };
+  }
+
+  _getMove(data) {
+    if (data.B && data.B[0] && data.B[0].length === 2) {
+      const [x, y] = parseVertex(data.B[0]);
+      return { color: 'black', x, y };
+    }
+    if (data.W && data.W[0] && data.W[0].length === 2) {
+      const [x, y] = parseVertex(data.W[0]);
+      return { color: 'white', x, y };
+    }
+    return null;
+  }
+
+  _getLabels(data) {
+    const labels = [];
+    if (data.LB) {
+      for (const lb of data.LB) {
+        const parts = lb.split(':');
+        if (parts.length >= 2) {
+          const [x, y] = parseVertex(parts[0]);
+          labels.push({ x, y, text: parts.slice(1).join(':') });
+        }
+      }
+    }
+    return labels;
+  }
+
+  _getMarks(data) {
+    const marks = [];
+    const types = { TR: 'triangle', SQ: 'square', CR: 'circle', MA: 'cross' };
+    for (const [key, type] of Object.entries(types)) {
+      if (data[key]) {
+        for (const coord of data[key]) {
+          const [x, y] = parseVertex(coord);
+          marks.push({ x, y, type });
+        }
+      }
+    }
+    return marks;
+  }
+
+  _coordToString(x, y) {
+    // Convert to Go coordinates (A-T, skipping I, 1-19 from bottom)
+    const letters = 'ABCDEFGHJKLMNOPQRST';
+    if (x < 0 || x >= this.boardSize || y < 0 || y >= this.boardSize) return '??';
+    return `${letters[x]}${this.boardSize - y}`;
+  }
+
+  /**
+   * Get current board state
+   * @returns {number[][]} 2D array, 0=empty, 1=black, 2=white
+   */
+  getBoard() {
+    return this.boardState;
+  }
+
+  /**
+   * Get move path as human-readable string
+   */
+  getPathString() {
+    const parts = [];
+    for (const { node } of this.moveHistory) {
+      const data = node.data || {};
+      const move = this._getMove(data);
+      if (move) {
+        const prefix = move.color === 'black' ? 'B' : 'W';
+        parts.push(`${prefix}${this._coordToString(move.x, move.y)}`);
+      }
+    }
+    // Add current node's move
+    const currentMove = this._getMove(this.currentNode.data || {});
+    if (currentMove) {
+      const prefix = currentMove.color === 'black' ? 'B' : 'W';
+      parts.push(`${prefix}${this._coordToString(currentMove.x, currentMove.y)}`);
+    }
+    return parts.join(' → ');
+  }
+}
+
