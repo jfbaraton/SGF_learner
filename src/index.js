@@ -62,10 +62,7 @@ class App {
     this.learnFileLeaves = document.getElementById('learn-file-leaves');
     this.learnStartLeaves = document.getElementById('learn-start-leaves');
     this.learnCurrentLeaves = document.getElementById('learn-current-leaves');
-    this.learnFileMistakes = document.getElementById('learn-file-mistakes');
-    this.learnStartMistakes = document.getElementById('learn-start-mistakes');
-    this.learnCurrentMistakes = document.getElementById('learn-current-mistakes');
-    this.mistakesList = document.getElementById('mistakes-list');
+   this.mistakesList = document.getElementById('mistakes-list');
 
     // Buttons
     this.btnStart = document.getElementById('btn-start');
@@ -86,7 +83,6 @@ class App {
     this.settingBoardSize = document.getElementById('setting-boardsize');
     this.settingVaryOrientation = document.getElementById('setting-vary-orientation');
     this.btnResetLeaves = document.getElementById('btn-reset-leaves');
-    this.btnResetMistakes = document.getElementById('btn-reset-mistakes');
 
     // Restore persisted settings
     this._loadSettings();
@@ -382,14 +378,9 @@ class App {
     this.btnResetLeaves.addEventListener('click', () => {
       if (confirm('Reset all discovered leaves? This cannot be undone.')) {
         this.foundLeaves.clear();
-        this._saveFoundLeaves();
-        this._updateLearnStats();
-      }
-    });
-    this.btnResetMistakes.addEventListener('click', () => {
-      if (confirm('Reset all mistakes? This cannot be undone.')) {
         this.mistakes = [];
         this._saveMistakes();
+        this._saveFoundLeaves();
         this._updateLearnStats();
       }
     });
@@ -587,22 +578,48 @@ class App {
   }
 
   _updateLearnStats() {
-    const foundSet = this.foundLeaves;
+      const foundSet = this.foundLeaves;
+      // Helper to format "found / total leaves (pct%)"
+      const fmt = (found, total, mistakes) => {
+          const pct = total > 0 ? Math.round((found / total) * 100) : 0;
+          return `${found} / ${total} leaves (${pct}%)  - ${mistakes} mistake${mistakes !== 1 ? 's' : ''}`;
+      };
+      // Current position scope
+      const currentPath = this.nav.getPath();
+      const currentStats = this.nav.countFoundLeaves(this.nav.currentNode, currentPath, foundSet);
 
-    // Helper to format "found / total leaves (pct%)"
-    const fmt = (found, total) => {
-      const pct = total > 0 ? Math.round((found / total) * 100) : 0;
-      return `${found} / ${total} leaves (${pct}%)`;
-    };
+
+      // Mistake counts
+      const currentPathKey = currentPath.join(',');
+      let startPathKey = null;
+      try {
+          const pathStr = localStorage.getItem('sgf-explorer-saved-start');
+          if (pathStr) {
+              const path = JSON.parse(pathStr);
+              if (Array.isArray(path)) startPathKey = path.join(',');
+          }
+      } catch (e) { /* ignore */ }
+
+      let fileMistakes = 0;
+      let startMistakes = 0;
+      let currentMistakes = 0;
+
+      for (const m of this.mistakes) {
+          const mKey = m.path.join(',');
+          fileMistakes++;
+          if (startPathKey !== null && (mKey === startPathKey || mKey.startsWith(startPathKey + ','))) {
+              startMistakes++;
+          }
+          if (mKey === currentPathKey || mKey.startsWith(currentPathKey + ',')) {
+              currentMistakes++;
+          }
+      }
 
     // File scope: all leaves from root
     const fileStats = this.nav.countFoundLeaves(this.nav.root, [], foundSet);
-    this.learnFileLeaves.textContent = fmt(fileStats.found, fileStats.total);
+    this.learnFileLeaves.textContent = fmt(fileStats.found, fileStats.total, fileMistakes);
 
-    // Current position scope
-    const currentPath = this.nav.getPath();
-    const currentStats = this.nav.countFoundLeaves(this.nav.currentNode, currentPath, foundSet);
-    this.learnCurrentLeaves.textContent = fmt(currentStats.found, currentStats.total);
+    this.learnCurrentLeaves.textContent = fmt(currentStats.found, currentStats.total, currentMistakes);
 
     // Start position scope
     const SAVED_START_KEY = 'sgf-explorer-saved-start';
@@ -625,7 +642,7 @@ class App {
           }
           if (valid) {
             const startStats = this.nav.countFoundLeaves(node, path, foundSet);
-            startText = fmt(startStats.found, startStats.total);
+            startText = fmt(startStats.found, startStats.total, currentMistakes);
           }
         }
       }
@@ -634,38 +651,6 @@ class App {
     }
     this.learnStartLeaves.textContent = startText;
 
-    // Mistake counts
-    const currentPathKey = currentPath.join(',');
-    let startPathKey = null;
-    try {
-      const pathStr = localStorage.getItem('sgf-explorer-saved-start');
-      if (pathStr) {
-        const path = JSON.parse(pathStr);
-        if (Array.isArray(path)) startPathKey = path.join(',');
-      }
-    } catch (e) { /* ignore */ }
-
-    let fileMistakes = 0;
-    let startMistakes = 0;
-    let currentMistakes = 0;
-
-    for (const m of this.mistakes) {
-      const mKey = m.path.join(',');
-      fileMistakes++;
-      if (startPathKey !== null && (mKey === startPathKey || mKey.startsWith(startPathKey + ','))) {
-        startMistakes++;
-      }
-      if (mKey === currentPathKey || mKey.startsWith(currentPathKey + ',')) {
-        currentMistakes++;
-      }
-    }
-
-    this.learnFileMistakes.textContent = fileMistakes;
-    this.learnFileMistakes.classList.toggle('has-mistakes', fileMistakes > 0);
-    this.learnStartMistakes.textContent = startPathKey !== null ? startMistakes : '—';
-    this.learnStartMistakes.classList.toggle('has-mistakes', startMistakes > 0);
-    this.learnCurrentMistakes.textContent = currentMistakes;
-    this.learnCurrentMistakes.classList.toggle('has-mistakes', currentMistakes > 0);
 
     // Populate mistakes list
     this._renderMistakesList();
