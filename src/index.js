@@ -2,7 +2,8 @@ import './styles.css';
 import SGFTreeNavigator from './sgf-tree-navigator';
 import GobanRenderer from './goban-renderer';
 import { parseVertex } from '@sabaki/sgf';
-import sgfContent from '../eidogo_joseki.sgf';
+// import sgfContent from '../eidogo_joseki.sgf';
+import sgfContent from '../handmade_mustknow.sgf';
 
 // --- Loading overlay ---
 function showLoading() {
