@@ -105,6 +105,12 @@ header h1 {
   letter-spacing: 0.5px;
 }
 
+#btn-save-start,
+#btn-saved-start {
+  font-size: 0.8rem !important;
+  letter-spacing: 0.3px;
+}
+
 #branch-controls {
   display: flex;
   align-items: center;

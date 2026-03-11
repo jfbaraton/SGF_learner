@@ -65,6 +65,8 @@ class App {
     this.btnFwdTen = document.getElementById('btn-fwd-10');
     this.btnEnd = document.getElementById('btn-end');
     this.btnPass = document.getElementById('btn-pass');
+    this.btnSaveStart = document.getElementById('btn-save-start');
+    this.btnSavedStart = document.getElementById('btn-saved-start');
 
     // Settings
     this.settingCoords = document.getElementById('setting-coords');
@@ -143,6 +145,8 @@ class App {
     this.btnFwdTen.addEventListener('click', () => this._forwardN(10));
     this.btnEnd.addEventListener('click', () => this._goToEnd());
     this.btnPass.addEventListener('click', () => this._pass());
+    this.btnSaveStart.addEventListener('click', () => this._saveStartPosition());
+    this.btnSavedStart.addEventListener('click', () => this._goToSavedStart());
 
     this.branchSelect.addEventListener('change', (e) => {
       this.selectedBranch = parseInt(e.target.value, 10);
@@ -282,6 +286,35 @@ class App {
     }
   }
 
+  _saveStartPosition() {
+    const SAVED_START_KEY = 'sgf-explorer-saved-start';
+    const path = this.nav.getPath();
+    try {
+      localStorage.setItem(SAVED_START_KEY, JSON.stringify(path));
+    } catch (e) {
+      // localStorage may be unavailable
+    }
+    this.btnSavedStart.disabled = false;
+  }
+
+  _goToSavedStart() {
+    const SAVED_START_KEY = 'sgf-explorer-saved-start';
+    let path;
+    try {
+      path = JSON.parse(localStorage.getItem(SAVED_START_KEY));
+    } catch (e) {
+      return;
+    }
+    if (!Array.isArray(path)) return;
+
+    this.nav.goToPath(path);
+    this.selectedBranch = 0;
+    if (this.settingVaryOrientation.checked) {
+      this.renderer.rotation = Math.floor(Math.random() * 4);
+    }
+    this._updateDisplay();
+  }
+
   _prevBranch() {
     const branches = this.nav.getBranches();
     if (branches.length <= 1) return;
@@ -338,6 +371,13 @@ class App {
 
     // Update pass button availability
     this.btnPass.disabled = this.nav.findPassBranch() < 0;
+
+    // Update saved start button availability
+    try {
+      this.btnSavedStart.disabled = !localStorage.getItem('sgf-explorer-saved-start');
+    } catch (e) {
+      this.btnSavedStart.disabled = true;
+    }
   }
 
   _updateBranchSelect() {

@@ -237,6 +237,38 @@ export default class SGFTreeNavigator {
   }
 
   /**
+   * Get the current path as an array of branch indices (serializable).
+   * Each entry is the child index that was chosen at that depth.
+   */
+  getPath() {
+    const path = [];
+    // Walk the move history: for each step, figure out which child index
+    // was taken from the parent to reach the next node.
+    for (let i = 0; i < this.moveHistory.length; i++) {
+      const parentNode = this.moveHistory[i].node;
+      const childNode = i + 1 < this.moveHistory.length
+        ? this.moveHistory[i + 1].node
+        : this.currentNode;
+      const children = parentNode.children || [];
+      const idx = children.indexOf(childNode);
+      path.push(idx >= 0 ? idx : 0);
+    }
+    return path;
+  }
+
+  /**
+   * Navigate to a position described by an array of branch indices.
+   * Resets to root first, then replays each step.
+   * @param {number[]} path
+   */
+  goToPath(path) {
+    this.goToStart();
+    for (const branchIndex of path) {
+      if (!this.next(branchIndex)) break;
+    }
+  }
+
+  /**
    * Get children/branches at current node
    * @returns {Array} branch descriptors
    */
