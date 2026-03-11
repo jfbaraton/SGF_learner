@@ -63,6 +63,7 @@ class App {
     this.btnNext = document.getElementById('btn-next');
     this.btnFwdTen = document.getElementById('btn-fwd-10');
     this.btnEnd = document.getElementById('btn-end');
+    this.btnPass = document.getElementById('btn-pass');
   }
 
   start() {
@@ -77,6 +78,7 @@ class App {
     this.btnNext.addEventListener('click', () => this._next());
     this.btnFwdTen.addEventListener('click', () => this._forwardN(10));
     this.btnEnd.addEventListener('click', () => this._goToEnd());
+    this.btnPass.addEventListener('click', () => this._pass());
 
     this.branchSelect.addEventListener('change', (e) => {
       this.selectedBranch = parseInt(e.target.value, 10);
@@ -113,6 +115,11 @@ class App {
         case 'End':
           e.preventDefault();
           this._goToEnd();
+          break;
+        case 'p':
+        case 'P':
+          e.preventDefault();
+          this._pass();
           break;
       }
     });
@@ -163,6 +170,14 @@ class App {
     }
     this.selectedBranch = 0;
     this._updateDisplay();
+  }
+
+  _pass() {
+    const passIdx = this.nav.findPassBranch();
+    if (passIdx >= 0) {
+      this.selectedBranch = passIdx;
+      this._next();
+    }
   }
 
   _prevBranch() {
@@ -218,6 +233,9 @@ class App {
 
     // Update branch selector
     this._updateBranchSelect();
+
+    // Update pass button availability
+    this.btnPass.disabled = this.nav.findPassBranch() < 0;
   }
 
   _updateBranchSelect() {

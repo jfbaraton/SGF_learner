@@ -82,6 +82,29 @@ header h1 {
   transform: scale(0.95);
 }
 
+#controls button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+#controls button:disabled:hover {
+  background: #16213e;
+  border-color: #0f3460;
+}
+
+#controls .control-separator {
+  width: 1px;
+  background: #0f3460;
+  align-self: stretch;
+  margin: 4px 4px;
+}
+
+#btn-pass {
+  font-size: 0.85rem !important;
+  letter-spacing: 0.5px;
+}
+
 #branch-controls {
   display: flex;
   align-items: center;

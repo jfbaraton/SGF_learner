@@ -246,12 +246,20 @@ export default class SGFTreeNavigator {
       const data = child.data || {};
       let desc = `Variation ${i + 1}`;
 
-      if (data.B && data.B[0]) {
-        const [x, y] = parseVertex(data.B[0]);
-        desc = `B ${this._coordToString(x, y)}`;
-      } else if (data.W && data.W[0]) {
-        const [x, y] = parseVertex(data.W[0]);
-        desc = `W ${this._coordToString(x, y)}`;
+      if (data.B !== undefined && data.B.length > 0) {
+        if (data.B[0] === '' || data.B[0].length === 0) {
+          desc = `B Pass`;
+        } else {
+          const [x, y] = parseVertex(data.B[0]);
+          desc = `B ${this._coordToString(x, y)}`;
+        }
+      } else if (data.W !== undefined && data.W.length > 0) {
+        if (data.W[0] === '' || data.W[0].length === 0) {
+          desc = `W Pass`;
+        } else {
+          const [x, y] = parseVertex(data.W[0]);
+          desc = `W ${this._coordToString(x, y)}`;
+        }
       }
 
       // Add comment preview if available
@@ -286,13 +294,19 @@ export default class SGFTreeNavigator {
   }
 
   _getMove(data) {
-    if (data.B && data.B[0] && data.B[0].length === 2) {
+    if (data.B !== undefined && data.B.length > 0) {
+      if (data.B[0] === '' || data.B[0].length === 0) {
+        return { color: 'black', x: -1, y: -1, pass: true };
+      }
       const [x, y] = parseVertex(data.B[0]);
-      return { color: 'black', x, y };
+      return { color: 'black', x, y, pass: false };
     }
-    if (data.W && data.W[0] && data.W[0].length === 2) {
+    if (data.W !== undefined && data.W.length > 0) {
+      if (data.W[0] === '' || data.W[0].length === 0) {
+        return { color: 'white', x: -1, y: -1, pass: true };
+      }
       const [x, y] = parseVertex(data.W[0]);
-      return { color: 'white', x, y };
+      return { color: 'white', x, y, pass: false };
     }
     return null;
   }
@@ -341,6 +355,23 @@ export default class SGFTreeNavigator {
   }
 
   /**
+   * Find the index of a pass branch among current children, or -1 if none
+   */
+  findPassBranch() {
+    const children = this.currentNode.children || [];
+    for (let i = 0; i < children.length; i++) {
+      const data = children[i].data || {};
+      if (data.B !== undefined && data.B.length > 0 && (data.B[0] === '' || data.B[0].length === 0)) {
+        return i;
+      }
+      if (data.W !== undefined && data.W.length > 0 && (data.W[0] === '' || data.W[0].length === 0)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
    * Get move path as human-readable string
    */
   getPathString() {
@@ -350,14 +381,14 @@ export default class SGFTreeNavigator {
       const move = this._getMove(data);
       if (move) {
         const prefix = move.color === 'black' ? 'B' : 'W';
-        parts.push(`${prefix}${this._coordToString(move.x, move.y)}`);
+        parts.push(move.pass ? `${prefix} Pass` : `${prefix}${this._coordToString(move.x, move.y)}`);
       }
     }
     // Add current node's move
     const currentMove = this._getMove(this.currentNode.data || {});
     if (currentMove) {
       const prefix = currentMove.color === 'black' ? 'B' : 'W';
-      parts.push(`${prefix}${this._coordToString(currentMove.x, currentMove.y)}`);
+      parts.push(currentMove.pass ? `${prefix} Pass` : `${prefix}${this._coordToString(currentMove.x, currentMove.y)}`);
     }
     return parts.join(' → ');
   }

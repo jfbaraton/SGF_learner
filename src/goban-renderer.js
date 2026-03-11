@@ -103,7 +103,7 @@ export default class GobanRenderer {
     this._drawCoordinates();
     this._drawStones(boardState);
 
-    if (info.move) {
+    if (info.move && !info.move.pass) {
       this._drawLastMoveIndicator(info.move.x, info.move.y);
     }
 
