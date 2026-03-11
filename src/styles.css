@@ -46,6 +46,22 @@ header h1 {
   padding: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   display: inline-block;
+  transition: box-shadow 0.3s;
+}
+
+#board-container.flash-green {
+  animation: greenFlash 2.6s ease-out;
+}
+
+@keyframes greenFlash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.8), 0 8px 32px rgba(0, 0, 0, 0.4);
+    background: #7ecb82;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0), 0 8px 32px rgba(0, 0, 0, 0.4);
+    background: #dcb35c;
+  }
 }
 
 #goban {
@@ -286,6 +302,22 @@ header h1 {
   max-width: 140px;
   accent-color: #e0c080;
   cursor: pointer;
+}
+
+.setting-btn-danger {
+  background: #5a1a1a;
+  color: #e0a0a0;
+  border: 1px solid #8b2020;
+  border-radius: 4px;
+  padding: 4px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.setting-btn-danger:hover {
+  background: #8b2020;
+  color: #fff;
 }
 
 #comment-text {

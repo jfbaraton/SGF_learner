@@ -468,5 +468,67 @@ export default class SGFTreeNavigator {
   getCurrentLeaves() {
     return this.countLeaves(this.currentNode);
   }
+
+  /**
+   * Whether the current node is a leaf (no children).
+   * @returns {boolean}
+   */
+  isLeaf() {
+    const children = this.currentNode.children || [];
+    return children.length === 0;
+  }
+
+  /**
+   * Collect all leaf paths in the subtree rooted at `node`.
+   * Each leaf path is represented as a string of comma-separated branch indices
+   * relative to the given `basePath` prefix.
+   * @param {object} node
+   * @param {number[]} basePath - the path to reach `node` from root
+   * @returns {string[]} array of path strings like "0,2,1,0"
+   */
+  getLeafPaths(node, basePath = []) {
+    const leaves = [];
+    const stack = [{ node, path: basePath }];
+    while (stack.length > 0) {
+      const { node: n, path } = stack.pop();
+      const children = n.children || [];
+      if (children.length === 0) {
+        leaves.push(path.join(','));
+      } else {
+        for (let i = 0; i < children.length; i++) {
+          stack.push({ node: children[i], path: [...path, i] });
+        }
+      }
+    }
+    return leaves;
+  }
+
+  /**
+   * Count how many leaves under `node` (starting from `basePath`) are in the foundSet.
+   * @param {object} node
+   * @param {number[]} basePath
+   * @param {Set<string>} foundSet - set of path strings
+   * @returns {{ found: number, total: number }}
+   */
+  countFoundLeaves(node, basePath, foundSet) {
+    let found = 0;
+    let total = 0;
+    const stack = [{ node, path: basePath }];
+    while (stack.length > 0) {
+      const { node: n, path } = stack.pop();
+      const children = n.children || [];
+      if (children.length === 0) {
+        total++;
+        if (foundSet.has(path.join(','))) {
+          found++;
+        }
+      } else {
+        for (let i = 0; i < children.length; i++) {
+          stack.push({ node: children[i], path: [...path, i] });
+        }
+      }
+    }
+    return { found, total };
+  }
 }
 

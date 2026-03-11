@@ -56,6 +56,7 @@ class App {
     this.commentText = document.getElementById('comment-text');
     this.moveCounter = document.getElementById('move-counter');
     this.pathDisplay = document.getElementById('path-display');
+    this.boardContainer = document.getElementById('board-container');
 
     // Learn stats
     this.learnFileLeaves = document.getElementById('learn-file-leaves');
@@ -80,9 +81,13 @@ class App {
     this.settingLastMove = document.getElementById('setting-lastmove');
     this.settingBoardSize = document.getElementById('setting-boardsize');
     this.settingVaryOrientation = document.getElementById('setting-vary-orientation');
+    this.btnResetLeaves = document.getElementById('btn-reset-leaves');
 
     // Restore persisted settings
     this._loadSettings();
+
+    // Found leaves tracking
+    this.foundLeaves = this._loadFoundLeaves();
   }
 
   start() {
@@ -165,6 +170,64 @@ class App {
     } catch (e) {
       // localStorage may be unavailable
     }
+  }
+
+  _loadFoundLeaves() {
+    const FOUND_KEY = 'sgf-explorer-found-leaves';
+    try {
+      const data = JSON.parse(localStorage.getItem(FOUND_KEY));
+      if (Array.isArray(data)) {
+        return new Set(data);
+      }
+    } catch (e) {
+      // ignore
+    }
+    return new Set();
+  }
+
+  _saveFoundLeaves() {
+    const FOUND_KEY = 'sgf-explorer-found-leaves';
+    try {
+      localStorage.setItem(FOUND_KEY, JSON.stringify([...this.foundLeaves]));
+    } catch (e) {
+      // localStorage may be unavailable
+    }
+  }
+
+  /**
+   * Check if current position is a leaf; if so, record it as found.
+   */
+  _checkLeaf() {
+    if (this.nav.isLeaf()) {
+      const path = this.nav.getPath();
+      const pathKey = path.join(',');
+      if (!this.foundLeaves.has(pathKey)) {
+        this.foundLeaves.add(pathKey);
+        this._saveFoundLeaves();
+      }
+    }
+  }
+
+  /**
+   * Check if all leaves under the current position are found.
+   * If so, flash the board green.
+   */
+  _checkAllLeavesFound() {
+    const currentPath = this.nav.getPath();
+    const stats = this.nav.countFoundLeaves(this.nav.currentNode, currentPath, this.foundLeaves);
+    if (stats.total > 0 && stats.found === stats.total) {
+      this._flashGreen();
+    }
+  }
+
+  _flashGreen() {
+    this.boardContainer.classList.remove('flash-green');
+    // Force reflow so re-adding the class restarts the animation
+    void this.boardContainer.offsetWidth;
+    this.boardContainer.classList.add('flash-green');
+    this.boardContainer.addEventListener('animationend', () => {
+      this.boardContainer.classList.remove('flash-green');
+    }, { once: true });
   }
 
   _bindEvents() {
@@ -260,6 +323,13 @@ class App {
         this._updateDisplay();
       }
       this._saveSettings();
+    });
+    this.btnResetLeaves.addEventListener('click', () => {
+      if (confirm('Reset all discovered leaves? This cannot be undone.')) {
+        this.foundLeaves.clear();
+        this._saveFoundLeaves();
+        this._updateLearnStats();
+      }
     });
   }
 
@@ -410,26 +480,42 @@ class App {
       this.btnSavedStart.disabled = true;
     }
 
+    // Check if we've reached a new leaf
+    this._checkLeaf();
+
+    // Flash green if all leaves under current position are found
+    this._checkAllLeavesFound();
+
     // Update Learn stats
     this._updateLearnStats();
   }
 
   _updateLearnStats() {
-    // File leaves (cached)
-    this.learnFileLeaves.textContent = `${this.nav.getTotalLeaves()} leaves`;
+    const foundSet = this.foundLeaves;
 
-    // Current position leaves
-    this.learnCurrentLeaves.textContent = `${this.nav.getCurrentLeaves()} leaves`;
+    // Helper to format "found / total leaves (pct%)"
+    const fmt = (found, total) => {
+      const pct = total > 0 ? Math.round((found / total) * 100) : 0;
+      return `${found} / ${total} leaves (${pct}%)`;
+    };
 
-    // Start position leaves
+    // File scope: all leaves from root
+    const fileStats = this.nav.countFoundLeaves(this.nav.root, [], foundSet);
+    this.learnFileLeaves.textContent = fmt(fileStats.found, fileStats.total);
+
+    // Current position scope
+    const currentPath = this.nav.getPath();
+    const currentStats = this.nav.countFoundLeaves(this.nav.currentNode, currentPath, foundSet);
+    this.learnCurrentLeaves.textContent = fmt(currentStats.found, currentStats.total);
+
+    // Start position scope
     const SAVED_START_KEY = 'sgf-explorer-saved-start';
-    let startLeaves = '—';
+    let startText = '—';
     try {
       const pathStr = localStorage.getItem(SAVED_START_KEY);
       if (pathStr) {
         const path = JSON.parse(pathStr);
         if (Array.isArray(path)) {
-          // Walk the tree from root following the path to find the start node
           let node = this.nav.root;
           let valid = true;
           for (const idx of path) {
@@ -442,14 +528,15 @@ class App {
             }
           }
           if (valid) {
-            startLeaves = `${this.nav.countLeaves(node)} leaves`;
+            const startStats = this.nav.countFoundLeaves(node, path, foundSet);
+            startText = fmt(startStats.found, startStats.total);
           }
         }
       }
     } catch (e) {
       // ignore
     }
-    this.learnStartLeaves.textContent = startLeaves;
+    this.learnStartLeaves.textContent = startText;
   }
 
   _updateBranchSelect() {
